@@ -1,0 +1,15 @@
+artifactory
+blueocean
+config-file-provider
+github
+gitlab-plugin
+pipeline-maven
+maven-plugin
+gradle
+docker-workflow
+slack
+sonar
+nodejs
+nexus-jenkins-plugin
+aws-credentials
+amazon-ecr

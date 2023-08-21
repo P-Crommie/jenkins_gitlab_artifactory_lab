@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+  jenkins:
+    container_name: jenkins
+    build: .
+    image: jenkins
+    ports:
+      - "8080:8080"
+    networks:
+      - cicd-lab.net
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+  gitlab:
+    container_name: gitlab
+    image: gitlab/gitlab-ce
+    restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://cicdlab.mooo.com'
+    ports:
+      - "80:80"
+      - "8022:22"
+    networks:
+      - cicd-lab.net
+    volumes:
+      - gitlab_data:/etc/gitlab
+      - gitlab_log:/var/log/gitlab
+      - gitlab_config:/var/opt/gitlab
+    shm_size: '256m'
+
+  artifactory:
+    container_name: artifactory
+    image: docker.bintray.io/jfrog/artifactory-oss
+    ports:
+      - "8082:8082"
+    networks:
+      - cicd-lab.net
+    volumes:
+      - artifactory_data:/var/opt/jfrog/artifactory
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 32000
+        hard: 40000
+
+volumes:
+  jenkins_home:
+  gitlab_data:
+  gitlab_log:
+  gitlab_config:
+  artifactory_data:
+
+networks:
+  cicd-lab.net:

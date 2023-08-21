@@ -1,0 +1,101 @@
+---
+- name: Setup CI/CD-Lab Server
+  hosts: cicd-lab
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: Update APT Cache
+      apt:
+        update_cache: yes
+
+    - name: Install dependencies
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+        - unzip
+        - zip
+        - curl
+        - wget
+        - tar
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+
+    - name: Install Docker
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+
+    - name: Start and Enable docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Docker Compose
+      apt:
+        name: docker-compose
+        state: present
+
+    - name: Add Ubuntu to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+- name: Initialize CI/CD Lab Compose
+  hosts: cicd-lab
+  gather_facts: no
+  become: true
+
+  vars:
+    lab_files:
+      - local_path: compose/dockerfile
+        remote_path: /home/ubuntu/compose/dockerfile
+      - local_path: compose/docker-compose.yml
+        remote_path: /home/ubuntu/compose/docker-compose.yml
+      - local_path: compose/plugins.txt
+        remote_path: /home/ubuntu/compose/plugins.txt
+
+  tasks:
+    - name: Create Project Dir
+      file:
+        path: /home/ubuntu/compose
+        state: directory
+
+    - name: Copy files to remote host
+      copy:
+        src: "{{ item.local_path }}"
+        dest: "{{ item.remote_path }}"
+      loop: "{{ lab_files }}"
+
+    - name: Run Docker Compose
+      command: docker compose up -d
+      args:
+        chdir: /home/ubuntu/compose
+
+    - name: Change owner and of compose dir 
+      file:
+        path: /home/ubuntu/compose
+        group: ubuntu
+        owner: ubuntu
+        recurse: yes
